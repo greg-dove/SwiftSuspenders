@@ -7,7 +7,7 @@
 
 package org.swiftsuspenders.mapping
 {
-	import flash.events.Event;
+	import org.apache.royale.events.Event;
 
 	public class MappingEvent extends Event
 	{
@@ -54,7 +54,7 @@ package org.swiftsuspenders.mapping
 			this.mapping = mapping;
 		}
 
-		override public function clone() : Event
+		override public function cloneEvent() : Event
 		{
 			return new MappingEvent(type, mappedType, mappedName, mapping);
 		}

@@ -7,8 +7,8 @@
 
 package org.swiftsuspenders.typedescriptions
 {
-	import flash.utils.Dictionary;
-	import flash.utils.getQualifiedClassName;
+
+	import org.apache.royale.reflection.getQualifiedClassName;
 
 	import org.swiftsuspenders.errors.InjectorError;
 
@@ -33,8 +33,8 @@ package org.swiftsuspenders.typedescriptions
 
 		public function setConstructor(
 			parameterTypes : Array, parameterNames : Array = null,
-			requiredParameters : uint = int.MAX_VALUE,
-			metadata : Dictionary = null) : TypeDescription
+			requiredParameters : uint = 2147483647 /*int.MAX_VALUE*/,
+			metadata : Object /*Dictionary*/ = null) : TypeDescription
 		{
 			ctor = new ConstructorInjectionPoint(
 				createParameterMappings(parameterTypes, parameterNames || []),
@@ -44,7 +44,7 @@ package org.swiftsuspenders.typedescriptions
 
 		public function addFieldInjection(
 			fieldName : String, type : Class, injectionName : String = '',
-			optional : Boolean = false, metadata : Dictionary = null) : TypeDescription
+			optional : Boolean = false, metadata : Object /*Dictionary*/ = null) : TypeDescription
 		{
 			if (_postConstructAdded)
 			{
@@ -57,8 +57,8 @@ package org.swiftsuspenders.typedescriptions
 
 		public function addMethodInjection(
 			methodName : String, parameterTypes : Array, parameterNames : Array = null,
-			requiredParameters : uint = int.MAX_VALUE, optional : Boolean = false,
-			metadata : Dictionary = null) : TypeDescription
+			requiredParameters : uint = 2147483647 /*int.MAX_VALUE*/, optional : Boolean = false,
+			metadata : Object /*Dictionary*/ = null) : TypeDescription
 		{
 			if (_postConstructAdded)
 			{
@@ -72,7 +72,7 @@ package org.swiftsuspenders.typedescriptions
 
 		public function addPostConstructMethod(
 			methodName : String, parameterTypes : Array, parameterNames : Array = null,
-			requiredParameters : uint = int.MAX_VALUE) : TypeDescription
+			requiredParameters : uint = 2147483647 /*int.MAX_VALUE*/) : TypeDescription
 		{
 			_postConstructAdded = true;
 			addInjectionPoint(new PostConstructInjectionPoint(
@@ -83,7 +83,7 @@ package org.swiftsuspenders.typedescriptions
 
 		public function addPreDestroyMethod(
 			methodName : String, parameterTypes : Array, parameterNames : Array = null,
-			requiredParameters : uint = int.MAX_VALUE) : TypeDescription
+			requiredParameters : uint = 2147483647 /*int.MAX_VALUE*/) : TypeDescription
 		{
 			const method : PreDestroyInjectionPoint = new PreDestroyInjectionPoint(
 				methodName, createParameterMappings(parameterTypes, parameterNames || []),

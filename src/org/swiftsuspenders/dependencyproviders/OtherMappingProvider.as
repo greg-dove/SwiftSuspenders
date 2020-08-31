@@ -7,7 +7,6 @@
 
 package org.swiftsuspenders.dependencyproviders
 {
-	import flash.utils.Dictionary;
 
 	import org.swiftsuspenders.mapping.InjectionMapping;
 	import org.swiftsuspenders.Injector;
@@ -30,7 +29,7 @@ package org.swiftsuspenders.dependencyproviders
 		 * provided to this provider's constructor
 		 */
 		public function apply(
-			targetType : Class, activeInjector : Injector, injectParameters : Dictionary) : Object
+			targetType : Class, activeInjector : Injector, injectParameters : Object /*Dictionary*/) : Object
 		{
 			return _mapping.getProvider().apply(targetType, activeInjector, injectParameters);
 		}

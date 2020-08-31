@@ -7,9 +7,9 @@
 
 package org.swiftsuspenders.typedescriptions
 {
-	import avmplus.getQualifiedClassName;
 
-	import flash.utils.Dictionary;
+
+	import org.apache.royale.reflection.getQualifiedClassName;
 
 	import org.swiftsuspenders.Injector;
 	import org.swiftsuspenders.errors.InjectorMissingMappingError;
@@ -27,7 +27,7 @@ package org.swiftsuspenders.typedescriptions
 
 		//----------------------               Public Methods               ----------------------//
 		public function MethodInjectionPoint(methodName : String, parameters : Array,
-			requiredParameters : uint, isOptional : Boolean, injectParameters : Dictionary)
+			requiredParameters : uint, isOptional : Boolean, injectParameters : Object/*Dictionary*/)
 		{
 			_methodName = methodName;
 			_parameterMappingIDs = parameters;

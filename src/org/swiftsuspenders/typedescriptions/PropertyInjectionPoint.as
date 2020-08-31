@@ -7,8 +7,8 @@
 
 package org.swiftsuspenders.typedescriptions
 {
-	import flash.utils.Dictionary;
-	import flash.utils.getQualifiedClassName;
+
+	import org.apache.royale.reflection.getQualifiedClassName;
 
 	import org.swiftsuspenders.Injector;
 	import org.swiftsuspenders.errors.InjectorMissingMappingError;
@@ -25,7 +25,7 @@ package org.swiftsuspenders.typedescriptions
 
 		//----------------------               Public Methods               ----------------------//
 		public function PropertyInjectionPoint(mappingId : String, propertyName : String,
-			optional : Boolean, injectParameters : Dictionary)
+			optional : Boolean, injectParameters : Object /*Dictionary*/)
 		{
 			_propertyName = propertyName;
 			_mappingId = mappingId;

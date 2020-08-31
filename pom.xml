@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2011 the original author or authors
+  ~ Copyright (c) 2014 the original author or authors
   ~
   ~ Permission is hereby granted to use, modify, and distribute this file
   ~ in accordance with the terms of the license agreement accompanying it.
@@ -17,14 +17,14 @@
 	</parent>
 	
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.swiftsuspenders</groupId>
+	<groupId>org.swiftsuspenders.royale</groupId>
 	<artifactId>swiftsuspenders</artifactId>
 	
-	<version>2.0.0-b3-SNAPSHOT</version>
+	<version>2.1.1</version>
 	
 	<packaging>swc</packaging>
 	
-	<name>Swiftsuspenders</name>
+	<name>Swiftsuspenders Royale</name>
 	<description>
 		Swiftsuspenders is a fast and light-weight IoC container for AS3
 		
@@ -98,15 +98,50 @@
 	</scm>
 
 	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<skipRat>false</skipRat>
+		<!-- Coding has made no assumption about SWF target -->
+		<royale.targets>SWF,JSRoyale</royale.targets>
+		<royale.skipAS>false</royale.skipAS>
+		<royale.debug>true</royale.debug>
+
+		<!-- Royale Library versions -->
+		<royale.develop>0.9.8-SNAPSHOT</royale.develop>
+		<royale.release>0.9.8-SNAPSHOT</royale.release>
+		<royale.version>0.9.8-SNAPSHOT</royale.version>
+
+		<player.version>20.0</player.version>
+		<flash.version>20.0</flash.version>
+		<air.version>20.0</air.version>
+
+		<java.version>1.8</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputencoding>UTF-8</project.reporting.outputencoding>
+		<maven.version>3.5.4</maven.version>
+
+		<royale.framework.version>${royale.version}</royale.framework.version>
+		<royale.compiler.version>${royale.version}</royale.compiler.version>
+		<royale.typedefs.version>${royale.version}</royale.typedefs.version>
+		<royale.build-tools.version>1.2.0</royale.build-tools.version>
+
+		<royale.showbindingWarnings>-compiler.show-binding-warnings=false;</royale.showbindingWarnings>
+		<royale.sourceMapSettings>-source-map=false;</royale.sourceMapSettings>
+		<royale.jsDefaultInitializers>-js-default-initializers=true;</royale.jsDefaultInitializers>
+
+
+	</properties>
+
+	<!--<properties>
 		<flexmojos.version>4.0-RC2</flexmojos.version>
 		
-		<!-- The Flex SDK to compile against -->
+		&lt;!&ndash; The Flex SDK to compile against &ndash;&gt;
 		<flex.sdk.version>4.5.1.21328</flex.sdk.version>
 		
-		<!-- Unit testing frameworks and dependencies -->
+		&lt;!&ndash; Unit testing frameworks and dependencies &ndash;&gt;
 		<flexunit.version>4.1.0-8</flexunit.version>
 		<hamcrest.version>1.1.3</hamcrest.version>
-	</properties>
+	</properties>-->
 
 	<distributionManagement>
 		<repository>
@@ -131,7 +166,7 @@
 				</includes>
 			</resource>
 		</resources>
-		<testResources>
+		<!--<testResources>
 			<testResource>
 				<directory>build/support/app-domain-test-files</directory>
 				<filtering>true</filtering>
@@ -140,9 +175,35 @@
 				</includes>
 				<targetPath>${project.build.directory}/build/support/app-domain-test-files</targetPath>
 			</testResource>
-		</testResources>
+		</testResources>-->
 		<plugins>
 			<plugin>
+				<groupId>org.apache.royale.compiler</groupId>
+				<artifactId>royale-maven-plugin</artifactId>
+				<version>${royale.compiler.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+					<forceSwcExternalLibraryPath>true</forceSwcExternalLibraryPath>
+					<allowSubclassOverrides>true</allowSubclassOverrides>
+					<targetPlayer>${player.version}</targetPlayer>
+					<targets>${royale.targets}</targets>
+					<debug>${royale.debug}</debug>
+					<skipExtern>true</skipExtern>
+					<skipAS>${royale.skipAS}</skipAS>
+					<includeClasses>
+						<includeClass>SwiftSuspendersClasses</includeClass>
+					</includeClasses>
+					<includeLookupOnly>true</includeLookupOnly>
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.royale.compiler</groupId>
+						<artifactId>compiler-jx</artifactId>
+						<version>${royale.compiler.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<!--<plugin>
 				<groupId>org.sonatype.flexmojos</groupId>
 				<artifactId>flexmojos-maven-plugin</artifactId>
 				<version>${flexmojos.version}</version>
@@ -170,39 +231,97 @@
 						<type>pom</type>
 					</dependency>
 				</dependencies>
-			</plugin>
+			</plugin>-->
 	</plugins>
 	</build>
 
 	<dependencies>
-		<!-- Note: while this includes the entire flex framework for compilation, the default for SWCs is external linkage, so nothing from the Flex framework will be added to the final output. -->
+
 		<dependency>
-			<groupId>com.adobe.flex.framework</groupId>
-			<artifactId>flex-framework</artifactId>
-			<version>${flex.sdk.version}</version>
-			<type>pom</type>
-		</dependency>
-		
-		<!-- ======================== -->
-		<!-- TEST Dependencies. (Only compiled in the unit test runner) -->
-		<dependency>
-			<groupId>com.adobe.flexunit</groupId>
-			<artifactId>flexunit</artifactId>
-			<version>${flexunit.version}</version>
+			<groupId>org.apache.royale.typedefs</groupId>
+			<artifactId>royale-typedefs-gcl</artifactId>
+			<version>${royale.typedefs.version}</version>
 			<type>swc</type>
-			<classifier>as3</classifier>
-			<scope>test</scope>
+			<classifier>typedefs</classifier>
 		</dependency>
-		
 		<dependency>
-			<groupId>org.hamcrest</groupId>
-			<artifactId>hamcrest-as3</artifactId>
-			<version>${hamcrest.version}</version>
+			<groupId>org.apache.royale.typedefs</groupId>
+			<artifactId>royale-typedefs-js</artifactId>
+			<version>${royale.typedefs.version}</version>
 			<type>swc</type>
-			<classifier>as3</classifier>
-			<scope>test</scope>
+			<classifier>typedefs</classifier>
+			<scope>runtime</scope>
 		</dependency>
-		<!-- ======================== -->
-		
+		<dependency>
+			<groupId>com.adobe.air.framework</groupId>
+			<artifactId>airglobal</artifactId>
+			<version>${air.version}</version>
+			<type>swc</type>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>Core</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>js</classifier>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>Core</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>swf</classifier>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>Language</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>js</classifier>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>XML</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>js</classifier>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>Reflection</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>js</classifier>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>Reflection</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>swf</classifier>
+			<scope>compile</scope>
+		</dependency>
+
+
+
+		<!--<dependency>
+			<groupId>org.apache.royale.framework</groupId>
+			<artifactId>RoyaleUnit</artifactId>
+			<version>${royale.version}</version>
+			<type>swc</type>
+			<classifier>js</classifier>
+		</dependency>-->
     </dependencies>
 </project>

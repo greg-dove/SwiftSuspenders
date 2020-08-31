@@ -7,7 +7,6 @@
 
 package org.swiftsuspenders.dependencyproviders
 {
-	import flash.utils.Dictionary;
 
 	import org.swiftsuspenders.Injector;
 
@@ -24,7 +23,7 @@ package org.swiftsuspenders.dependencyproviders
 		}
 
 		override public function apply(
-			targetType : Class, activeInjector : Injector, injectParameters : Dictionary) : Object
+			targetType : Class, activeInjector : Injector, injectParameters : Object /*Dictionary*/) : Object
 		{
 			return provider.apply(targetType, injector, injectParameters);
 		}

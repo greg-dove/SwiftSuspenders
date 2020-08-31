@@ -7,7 +7,7 @@
 
 package org.swiftsuspenders
 {
-	import flash.events.Event;
+	import org.apache.royale.events.Event;
 
 	public class InjectionEvent extends Event
 	{
@@ -37,7 +37,7 @@ package org.swiftsuspenders
 			this.instanceType = instanceType;
 		}
 
-		override public function clone() : Event
+		override public function cloneEvent() : Event
 		{
 			return new InjectionEvent(type, instance, instanceType);
 		}

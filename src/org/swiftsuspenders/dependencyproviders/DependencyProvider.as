@@ -7,7 +7,7 @@
 
 package org.swiftsuspenders.dependencyproviders
 {
-	import flash.utils.Dictionary;
+
 
 	import org.swiftsuspenders.Injector;
 
@@ -23,7 +23,7 @@ package org.swiftsuspenders.dependencyproviders
 		 * @return The result of the specific DependencyProvider's mechanism
 		 */
 		function apply(
-			targetType : Class, activeInjector : Injector, injectParameters : Dictionary) : Object;
+			targetType : Class, activeInjector : Injector, injectParameters : Object /*Dictionary*/) : Object;
 
 		/**
 		 * Cleans up any internal state the provider might keep as preparation for the Injector

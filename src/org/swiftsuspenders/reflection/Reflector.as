@@ -12,7 +12,7 @@ package org.swiftsuspenders.reflection
 	public interface Reflector
 	{
 		function getClass(value : Object) : Class;
-		function getFQCN(value : *, replaceColons : Boolean = false) : String;
+	//	function getFQCN(value : *, replaceColons : Boolean = false) : String;
 		function typeImplements(type : Class, superType : Class) : Boolean;
 
 		function describeInjections(type : Class) : TypeDescription;

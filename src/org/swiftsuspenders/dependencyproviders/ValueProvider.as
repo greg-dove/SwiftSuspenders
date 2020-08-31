@@ -7,7 +7,6 @@
 
 package org.swiftsuspenders.dependencyproviders
 {
-	import flash.utils.Dictionary;
 
 	import org.swiftsuspenders.Injector;
 
@@ -15,11 +14,13 @@ package org.swiftsuspenders.dependencyproviders
 	{
 		//----------------------       Private / Protected Properties       ----------------------//
 		private var _value : Object;
+		private var _creatingInjector : Injector;
 
 		//----------------------               Public Methods               ----------------------//
-		public function ValueProvider(value : Object)
+		public function ValueProvider(value : Object, creatingInjector : Injector = null)
 		{
 			_value = value;
+			_creatingInjector = creatingInjector;
 		}
 
 		/**
@@ -28,14 +29,19 @@ package org.swiftsuspenders.dependencyproviders
 		 * @return The value provided to this provider's constructor
 		 */
 		public function apply(
-			targetType : Class, activeInjector : Injector, injectParameters : Dictionary) : Object
+			targetType : Class, activeInjector : Injector, injectParameters : Object /*Dictionary*/) : Object
 		{
 			return _value;
 		}
 
 		public function destroy() : void
 		{
-			//TODO: figure out whether to invoke pre destroy methods here. And how.
+			if (_value && _creatingInjector && _creatingInjector.hasManagedInstance(_value))
+			{
+				_creatingInjector.destroyInstance(_value);
+			}
+			_creatingInjector = null;
+			_value = null;
 		}
 	}
 }

@@ -7,9 +7,21 @@
 
 package org.swiftsuspenders.reflection
 {
-	import flash.utils.Dictionary;
-	import flash.utils.describeType;
-	import flash.utils.getQualifiedClassName;
+
+	import org.apache.royale.reflection.describeType;
+	import org.apache.royale.reflection.TypeDefinition;
+	import org.apache.royale.reflection.MethodDefinition;
+	import org.apache.royale.reflection.DefinitionWithMetaData;
+	import org.apache.royale.reflection.MemberDefinitionBase;
+	import org.apache.royale.reflection.MetaDataDefinition;
+	import org.apache.royale.reflection.MetaDataArgDefinition;
+	import org.apache.royale.reflection.ParameterDefinition;
+	import org.apache.royale.reflection.VariableDefinition;
+
+	import org.apache.royale.reflection.getQualifiedClassName;
+	import org.apache.royale.reflection.utils.isDerivedType;
+	import org.apache.royale.reflection.utils.getMembersWithMetadata;
+	import org.apache.royale.reflection.utils.MemberTypes;
 
 	import org.swiftsuspenders.errors.InjectorError;
 
@@ -24,7 +36,7 @@ package org.swiftsuspenders.reflection
 	public class DescribeTypeReflector extends ReflectorBase implements Reflector
 	{
 		//----------------------       Private / Protected Properties       ----------------------//
-		private var _currentFactoryXML : XML;
+		private var _currentFactoryDefinition : TypeDefinition;
 
 		//----------------------               Public Methods               ----------------------//
 		public function typeImplements(type : Class, superType : Class) : Boolean
@@ -34,91 +46,226 @@ package org.swiftsuspenders.reflection
 	            return true;
             }
 
-            var factoryDescription : XML = describeType(type).factory[0];
+            var type1 : TypeDefinition = describeType(type);
+			var type2 : TypeDefinition = describeType(superType);
 
-			return (factoryDescription.children().(
-            	name() == "implementsInterface" || name() == "extendsClass").(
-            	attribute("type") == getQualifiedClassName(superType)).length() > 0);
+			return isDerivedType(type1, type2);
 		}
 
 		public function describeInjections(type : Class) : TypeDescription
 		{
-			_currentFactoryXML = describeType(type).factory[0];
+			_currentFactoryDefinition = describeType(type);
 			const description : TypeDescription = new TypeDescription(false);
 			addCtorInjectionPoint(description, type);
 			addFieldInjectionPoints(description);
 			addMethodInjectionPoints(description);
 			addPostConstructMethodPoints(description);
 			addPreDestroyMethodPoints(description);
-			_currentFactoryXML = null;
+			_currentFactoryDefinition = null;
 			return description;
 		}
 
 		//----------------------         Private / Protected Methods        ----------------------//
+		/**
+		 *
+		 * @royaleignorecoercion Object
+		 */
 		private function addCtorInjectionPoint(description : TypeDescription, type : Class) : void
 		{
-			const node : XML = _currentFactoryXML.constructor[0];
+			/*const node : XML = _currentFactoryDefinition.constructor[0];
 			if (!node)
 			{
-				if (_currentFactoryXML.parent().@name == 'Object'
-						|| _currentFactoryXML.extendsClass.length() > 0)
+				if (_currentFactoryDefinition.parent().@name == 'Object'
+						|| _currentFactoryDefinition.extendsClass.length() > 0)
 				{
 					description.ctor = new NoParamsConstructorInjectionPoint();
 				}
 				return;
+			}*/
+
+			var constructor:MethodDefinition = _currentFactoryDefinition.constructorMethod;
+			const paramDefinitions:Array = constructor.parameters;
+			if (paramDefinitions.length == 0) {
+				description.ctor = new NoParamsConstructorInjectionPoint();
+				return;
 			}
-			const injectParameters : Dictionary = extractNodeParameters(node.parent().metadata.arg);
+
+
+			const injectParameters : Object = extractInjectMetaData(_currentFactoryDefinition);
 			const parameterNames : Array = (injectParameters.name || '').split(',');
-			const parameterNodes : XMLList = node.parameter;
+
+			//const parameterNodes : XMLList = node.parameter;
 			/*
 			 In many cases, the flash player doesn't give us type information for constructors until
 			 the class has been instantiated at least once. Therefore, we do just that if we don't get
 			 type information for at least one parameter.
 			 */
-			if (parameterNodes.(@type == '*').length() == parameterNodes.@type.length())
+			/*if (parameterNodes.(@type == '*').length() == parameterNodes.@type.length())
 			{
 				createDummyInstance(node, type);
-			}
-			const parameters : Array = gatherMethodParameters(parameterNodes, parameterNames);
-			const requiredParameters : uint = parameters.required;
-			delete parameters.required;
+			}*/
+			const parameters : Array = gatherMethodParameters(paramDefinitions, parameterNames);
+			const requiredParameters : uint = (parameters as Object).required;
+			delete (parameters as Object).required;
 			description.ctor = new ConstructorInjectionPoint(parameters, requiredParameters,
 				injectParameters);
 		}
-		private function extractNodeParameters(args : XMLList) : Dictionary
+		private function extractInjectMetaData(definition : DefinitionWithMetaData) : Object
 		{
-			const parametersMap : Dictionary = new Dictionary();
-			var length : uint = args.length();
+			var parametersMap : Object = {};
+			var metas:Array = definition.metadata;
+
+			var length : uint = metas.length;
 			for (var i : int = 0; i < length; i++)
 			{
-				var parameter : XML = args[i];
-				var key : String = parameter.@key;
-				parametersMap[key] = parametersMap[key]
+				var meta : MetaDataDefinition = metas[i] as MetaDataDefinition;
+				if (meta.name != 'Inject') continue;
+				var args: Array = meta.args;
+				var arglen:uint = args.length;
+				for (var ii:int =0; ii<arglen; ii++) {
+					var arg:MetaDataArgDefinition = args[ii] as MetaDataArgDefinition;
+					parametersMap[arg.key] = arg;
+				}
+				/*var key : String = parameter.@key;
+				parametersMap[key] = parametersMap[key] != undefined  //<--- need to check this 'undefined'
 					? parametersMap[key] + ',' + parameter.attribute('value')
-					: parameter.attribute('value');
+					: parameter.attribute('value').toString();*/
 			}
 			return parametersMap;
 		}
+
+		private function extractTagParameters(tag : String, definition : DefinitionWithMetaData) : Object
+		{
+			var metadata:Array = definition.metadata;
+			var length : uint = metadata.length ;
+			for (var i : int = 0; i < length; i++)
+			{
+				var entry : MetaDataDefinition = metadata[i] as MetaDataDefinition;
+				if (entry.name == tag)
+				{
+
+					const parametersList : Array = entry.args;
+					const parametersMap : Object = {};
+					const parametersCount : int = parametersList.length;
+					for (var j : int = 0; j < parametersCount; j++)
+					{
+						const parameter : MetaDataArgDefinition = parametersList[j] as MetaDataArgDefinition;
+						parametersMap[parameter.key] = parametersMap[parameter.key] != undefined
+								? parametersMap[parameter.key] + ',' + parameter.value
+								: parameter.value;
+					}
+					parametersMap['_'] = parametersList; //@todo consider removing
+					return parametersMap;
+				}
+			}
+			return null;
+		}
+
+
 		private function addFieldInjectionPoints(description : TypeDescription) : void
 		{
-			for each (var node : XML in _currentFactoryXML.*.
+
+			var injectFields:Array = getMembersWithMetadata(_currentFactoryDefinition ,'Inject', false, MemberTypes.ACCESSORS |  MemberTypes.VARIABLES);
+
+			for each(var fieldDefinition:VariableDefinition in injectFields) {
+
+				var injectMetas:Array = fieldDefinition.retrieveMetaDataByName('Inject');
+				var injectMeta:MetaDataDefinition = injectMetas[0];
+				var nameArg:MetaDataArgDefinition = injectMeta.getArgsByKey('name')[0];
+
+				var mappingId : String =
+						fieldDefinition.type.qualifiedName + '|' + nameArg ? nameArg.value : '';
+				var propertyName : String = fieldDefinition.name;
+
+				const injectParameters : Object = extractInjectMetaData(fieldDefinition);
+
+				var injectionPoint : PropertyInjectionPoint = new PropertyInjectionPoint(mappingId,
+						propertyName, injectParameters.optional, injectParameters);
+				description.addInjectionPoint(injectionPoint);
+
+			}
+
+
+
+			/*for each (var node : XML in _currentFactoryDefinition.*.
 					(name() == 'variable' || name() == 'accessor').metadata.(@name == 'Inject'))
 			{
 				var mappingId : String =
 						node.parent().@type + '|' + node.arg.(@key == 'name').attribute('value');
 				var propertyName : String = node.parent().@name;
-				const injectParameters : Dictionary = extractNodeParameters(node.arg);
+				const injectParameters : Object = extractInjectMetaData(node.arg);
 				var injectionPoint : PropertyInjectionPoint = new PropertyInjectionPoint(mappingId,
 					propertyName, injectParameters.optional == 'true', injectParameters);
+				description.addInjectionPoint(injectionPoint);
+			}*/
+		}
+
+		/*
+		private function extractInjectMetaData(definition : DefinitionWithMetaData) : Object
+		{
+			var parametersMap : Object = {};
+			var metas:Array = definition.metadata;
+
+			var length : uint = metas.length;
+			for (var i : int = 0; i < length; i++)
+			{
+				var meta : MetaDataDefinition = metas[i] as MetaDataDefinition;
+				if (meta.name != 'Inject') continue;
+				var args: Array = meta.args;
+				var arglen:uint = args.length;
+				for (var ii:int =0; ii<arglen; ii++) {
+					var arg:MetaDataArgDefinition = args[ii] as MetaDataArgDefinition;
+					parametersMap[arg.key] = arg;
+				}
+				/*var key : String = parameter.@key;
+				parametersMap[key] = parametersMap[key] != undefined  //<--- need to check this 'undefined'
+					? parametersMap[key] + ',' + parameter.attribute('value')
+					: parameter.attribute('value').toString();
+				}
+			return parametersMap;
+			}
+		private function addFieldInjectionPoints(description : TypeDescription) : void
+		{
+			for each (var node : XML in _currentFactoryDefinition.*.
+			(name() == 'variable' || name() == 'accessor').metadata.(@name == 'Inject'))
+			{
+				var mappingId : String =
+						node.parent().@type + '|' + node.arg.(@key == 'name').attribute('value');
+				var propertyName : String = node.parent().@name;
+				const injectParameters : Dictionary = extractInjectMetaData(node.arg);
+				var injectionPoint : PropertyInjectionPoint = new PropertyInjectionPoint(mappingId,
+						propertyName, injectParameters.optional == 'true', injectParameters);
 				description.addInjectionPoint(injectionPoint);
 			}
 		}
 
+		 */
+		/**
+		 *
+		 * @royaleignorecoercion Object
+		 */
 		private function addMethodInjectionPoints(description : TypeDescription) : void
 		{
-			for each (var node : XML in _currentFactoryXML.method.metadata.(@name == 'Inject'))
+			var injectMethods:Array = getMembersWithMetadata(_currentFactoryDefinition ,'Inject', false, MemberTypes.METHODS);
+
+			for each(var injectMethod:MethodDefinition in injectMethods) {
+				const injectParameters : Object = extractInjectMetaData(injectMethod);
+				const parameterNames : Array = (injectParameters.name || '').split(',');
+				const parameters : Array =
+						gatherMethodParameters(injectMethod.parameters, parameterNames);
+				const requiredParameters : uint = (parameters as Object).required;
+				delete (parameters as Object).required;
+				var injectionPoint : MethodInjectionPoint = new MethodInjectionPoint(
+						injectMethod.name, parameters, requiredParameters,
+						injectParameters.optional, injectParameters);
+				description.addInjectionPoint(injectionPoint);
+
+			}
+
+
+			/*for each (var node : XML in _currentFactoryDefinition.method.metadata.(@name == 'Inject'))
 			{
-				const injectParameters : Dictionary = extractNodeParameters(node.arg);
+				const injectParameters : Object = extractInjectMetaData(node.arg);
 				const parameterNames : Array = (injectParameters.name || '').split(',');
 				const parameters : Array =
 						gatherMethodParameters(node.parent().parameter, parameterNames);
@@ -128,7 +275,7 @@ package org.swiftsuspenders.reflection
 					node.parent().@name, parameters, requiredParameters,
 					injectParameters.optional == 'true', injectParameters);
 				description.addInjectionPoint(injectionPoint);
-			}
+			}*/
 		}
 
 		private function addPostConstructMethodPoints(description : TypeDescription) : void
@@ -157,25 +304,28 @@ package org.swiftsuspenders.reflection
 				description.preDestroyMethods.last = injectionPoints[i];
 			}
 		}
-
+		/**
+		 *
+		 * @royaleignorecoercion Object
+		 */
 		private function gatherMethodParameters(
-			parameterNodes : XMLList, parameterNames : Array) : Array
+			parameterDefinitions : Array, parameterNames : Array) : Array
 		{
 			var requiredParameters : uint = 0;
-			const length : uint = parameterNodes.length();
+			const length : uint = parameterDefinitions.length;
 			const parameters : Array = new Array(length);
 			for (var i : int = 0; i < length; i++)
 			{
-				var parameter : XML = parameterNodes[i];
+				var parameter : ParameterDefinition = parameterDefinitions[i];
 				var injectionName : String = parameterNames[i] || '';
-				var parameterTypeName : String = parameter.@type;
-				var optional : Boolean = parameter.@optional == 'true';
+				var parameterTypeName : String = parameter.type.qualifiedName;
+				var optional : Boolean = parameter.optional;
 				if (parameterTypeName == '*')
 				{
 					if (!optional)
 					{
 						throw new InjectorError('Error in method definition of injectee "' +
-							_currentFactoryXML.@type + 'Required parameters can\'t have type "*".');
+							_currentFactoryDefinition.qualifiedName + 'Required parameters can\'t have type "*".');
 					}
 					else
 					{
@@ -188,18 +338,43 @@ package org.swiftsuspenders.reflection
 				}
 				parameters[i] = parameterTypeName + '|' + injectionName;
 			}
-			parameters.required = requiredParameters;
+			(parameters as Object).required = requiredParameters;
 			return parameters;
 		}
-
+		/**
+		 *
+		 * @royaleignorecoercion Object
+		 */
 		private function gatherOrderedInjectionPointsForTag(
 				injectionPointType : Class, tag : String) : Array
 		{
 			const injectionPoints : Array = [];
-			for each (var node : XML in
-				_currentFactoryXML..metadata.(@name == tag))
+			var tagMembers:Array = getMembersWithMetadata(_currentFactoryDefinition ,tag, false, MemberTypes.METHODS ); //@todo review... this assumes methods only, but original did not
+			for each (var methodDefinition:MethodDefinition in tagMembers)
 			{
-				const injectParameters : Dictionary = extractNodeParameters(node.arg);
+
+				const injectParameters : Object = extractInjectMetaData(methodDefinition);
+				const parameterNames : Array = (injectParameters.name || '').split(',');
+				const parameters : Array =
+						gatherMethodParameters(methodDefinition.parameters, parameterNames);
+				const requiredParameters : uint = (parameters as Object).required;
+				delete (parameters as Object).required;
+				var tags:Array = methodDefinition.retrieveMetaDataByName(tag);
+				for (var metaTag:MetaDataDefinition in tags) {
+					var orderTag:MetaDataArgDefinition = metaTag.getArgsByKey('order')[0];
+					var order : Number = orderTag? parseInt(orderTag.value) :  NaN;
+					injectionPoints.push(new injectionPointType(methodDefinition.name,
+							parameters, requiredParameters, isNaN(order) ? int.MAX_VALUE : order));
+				}
+
+
+
+			}
+
+			/*for each (var node : XML in
+				_currentFactoryDefinition..metadata.(@name == tag))
+			{
+				const injectParameters : Object = extractInjectMetaData(node.arg);
 				const parameterNames : Array = (injectParameters.name || '').split(',');
 				const parameters : Array =
 					gatherMethodParameters(node.parent().parameter, parameterNames);
@@ -208,7 +383,7 @@ package org.swiftsuspenders.reflection
 				var order : Number = parseInt(node.arg.(@key == 'order').@value);
 				injectionPoints.push(new injectionPointType(node.parent().@name,
 					parameters, requiredParameters, isNaN(order) ? int.MAX_VALUE : order));
-			}
+			}*/
 			if (injectionPoints.length > 0)
 			{
 				injectionPoints.sortOn('order', Array.NUMERIC);
@@ -216,7 +391,7 @@ package org.swiftsuspenders.reflection
 			return injectionPoints;
 		}
 
-		private function createDummyInstance(constructorNode : XML, clazz : Class) : void
+		/*private function createDummyInstance(constructorNode : XML, clazz : Class) : void
 		{
 			try
 			{
@@ -246,6 +421,6 @@ package org.swiftsuspenders.reflection
 						'The caught exception was:\n' + error);
 			}
 			constructorNode.setChildren(describeType(clazz).factory.constructor[0].children());
-		}
+		}*/
 	}
 }

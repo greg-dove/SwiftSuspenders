@@ -7,13 +7,15 @@
 
 package org.swiftsuspenders
 {
-	import avmplus.DescribeTypeJSON;
 
-	import flash.events.EventDispatcher;
-	import flash.system.ApplicationDomain;
-	import flash.utils.Dictionary;
-	import flash.utils.getDefinitionByName;
-	import flash.utils.getQualifiedClassName;
+	COMPILE::SWF{
+		import flash.utils.Dictionary;
+	}
+
+	import org.apache.royale.events.EventDispatcher;
+
+	import org.apache.royale.reflection.getDefinitionByName;
+	import org.apache.royale.reflection.getQualifiedClassName;
 
 	import org.swiftsuspenders.dependencyproviders.DependencyProvider;
 	import org.swiftsuspenders.dependencyproviders.FallbackDependencyProvider;
@@ -24,7 +26,7 @@ package org.swiftsuspenders
 	import org.swiftsuspenders.errors.InjectorMissingMappingError;
 	import org.swiftsuspenders.mapping.InjectionMapping;
 	import org.swiftsuspenders.mapping.MappingEvent;
-	import org.swiftsuspenders.reflection.DescribeTypeJSONReflector;
+	//import org.swiftsuspenders.reflection.DescribeTypeJSONReflector;
 	import org.swiftsuspenders.reflection.DescribeTypeReflector;
 	import org.swiftsuspenders.reflection.Reflector;
 	import org.swiftsuspenders.typedescriptions.ConstructorInjectionPoint;
@@ -171,14 +173,20 @@ package org.swiftsuspenders
 	public class Injector extends EventDispatcher
 	{
 		//----------------------       Private / Protected Properties       ----------------------//
+		COMPILE::SWF
 		private static var INJECTION_POINTS_CACHE : Dictionary = new Dictionary(true);
+		COMPILE::JS
+		private static var INJECTION_POINTS_CACHE : WeakMap = new WeakMap();
 
 		private var _parentInjector : Injector;
-        private var _applicationDomain:ApplicationDomain;
+    //    private var _applicationDomain:ApplicationDomain;
 		private var _classDescriptor : TypeDescriptor;
-		private var _mappings : Dictionary;
-		private var _mappingsInProcess : Dictionary;
+		private var _mappings : Object /*Dictionary*/;
+		private var _mappingsInProcess : Object /*Dictionary*/;
+		COMPILE::SWF
 		private var _managedObjects : Dictionary;
+		COMPILE::JS
+		private var _managedObjects : Map;
 		private var _reflector : Reflector;
 		private var _fallbackProvider : FallbackDependencyProvider;
 		private var _blockParentFallbackProvider : Boolean = false;
@@ -196,16 +204,21 @@ package org.swiftsuspenders
 
 
 		//----------------------            Internal Properties             ----------------------//
-		SsInternal const providerMappings : Dictionary = new Dictionary();
+		SsInternal const providerMappings : Object = {};//Dictionary = new Dictionary();
 
 
 		//----------------------               Public Methods               ----------------------//
 		public function Injector()
 		{
-			_mappings = new Dictionary();
-			_mappingsInProcess = new Dictionary();
-			_managedObjects = new Dictionary();
-			try
+			_mappings = {};//new Dictionary();
+			_mappingsInProcess = {};//new Dictionary();
+			COMPILE::SWF{
+				_managedObjects = new Dictionary();
+			}
+			COMPILE::JS{
+				_managedObjects = new Map();
+			}
+			/*try
 			{
 				_reflector = DescribeTypeJSON.available
 					? new DescribeTypeJSONReflector()
@@ -214,9 +227,10 @@ package org.swiftsuspenders
 			catch (e:Error)
 			{
 				_reflector = new DescribeTypeReflector();
-			}
+			}*/
+			_reflector = new DescribeTypeReflector();
 			_classDescriptor = new TypeDescriptor(_reflector, INJECTION_POINTS_CACHE);
-			_applicationDomain = ApplicationDomain.currentDomain;
+			//_applicationDomain = ApplicationDomain.currentDomain;
 		}
 
 		/**
@@ -338,6 +352,19 @@ package org.swiftsuspenders
 		}
 
 		/**
+		 * Checks if an instance is managed by this Injector.
+		 *
+		 * <p>An instance is "managed" if it was created or injected into by this Injector.</p>
+		 *
+		 * @param instance The instance to check
+		 * @return True if the Injector is managing this instance
+		 */
+		public function hasManagedInstance(instance : Object) : Boolean
+		{
+			return _managedObjects[instance];
+		}
+
+		/**
 		 * Inspects the given object and injects into all injection points configured for its class.
 		 *
 		 * @param target The instance to inject into
@@ -440,10 +467,7 @@ package org.swiftsuspenders
 		 */
 		public function destroyInstance(instance : Object) : void
 		{
-			if (!instance)
-			{
-				return;
-			}
+			delete _managedObjects[instance];
 			const type : Class = _reflector.getClass(instance);
 			const typeDescription : TypeDescription = getTypeDescription(type);
 			for (var preDestroyHook : PreDestroyInjectionPoint = typeDescription.preDestroyMethods;
@@ -471,13 +495,27 @@ package org.swiftsuspenders
 			{
 				mapping.getProvider().destroy();
 			}
+			var objectsToRemove:Vector.<Object> = new Vector.<Object>();
 			for each (var instance : Object in _managedObjects)
 			{
-				destroyInstance(instance);
+				instance && objectsToRemove.push(instance);
 			}
-			_mappings = new Dictionary();
-			_mappingsInProcess = new Dictionary();
-			_managedObjects = new Dictionary();
+			while(objectsToRemove.length)
+			{
+				destroyInstance(objectsToRemove.pop());
+			}
+			for (var mappingId:String in providerMappings)
+			{
+				delete providerMappings[mappingId];
+			}
+			_mappings = {};//new Dictionary();
+			_mappingsInProcess = {};//new Dictionary();
+			COMPILE::SWF{
+				_managedObjects = new Dictionary();
+			}
+			COMPILE::JS{
+				_managedObjects = new Map();
+			}
 			_fallbackProvider = null;
 			_blockParentFallbackProvider = false;
 		}
@@ -486,16 +524,13 @@ package org.swiftsuspenders
 		 * Creates a new <code>Injector</code> and sets itself as that new <code>Injector</code>'s
 		 * <code>parentInjector</code>.
 		 *
-		 * @param applicationDomain The optional domain to use in the new Injector.
-		 * If not given, the creating injector's domain is set on the new Injector as well.
 		 * @return The newly created <code>Injector</code> instance
 		 *
 		 * @see #parentInjector
 		 */
-		public function createChildInjector(applicationDomain : ApplicationDomain = null) : Injector
+		public function createChildInjector() : Injector
 		{
 			var injector : Injector = new Injector();
-            injector.applicationDomain = applicationDomain || this.applicationDomain;
 			injector.parentInjector = this;
 			return injector;
 		}
@@ -524,14 +559,6 @@ package org.swiftsuspenders
 			return _parentInjector;
 		}
 
-		public function set applicationDomain(applicationDomain : ApplicationDomain) : void
-		{
-			_applicationDomain = applicationDomain || ApplicationDomain.currentDomain;
-		}
-		public function get applicationDomain() : ApplicationDomain
-		{
-			return _applicationDomain;
-		}
 
 		/**
 		 * Instructs the injector to use the description for the given type when constructing or
@@ -593,7 +620,13 @@ package org.swiftsuspenders
 		//----------------------             Internal Methods               ----------------------//
 		SsInternal static function purgeInjectionPointsCache() : void
 		{
-			INJECTION_POINTS_CACHE = new Dictionary(true);
+			COMPILE::SWF {
+				INJECTION_POINTS_CACHE = new Dictionary(true);
+			}
+
+			COMPILE::JS {
+				INJECTION_POINTS_CACHE = new WeakMap();
+			}
 		}
 				
 		SsInternal function canBeInstantiated(type : Class) : Boolean

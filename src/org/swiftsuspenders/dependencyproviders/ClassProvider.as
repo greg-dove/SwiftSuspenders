@@ -7,7 +7,7 @@
 
 package org.swiftsuspenders.dependencyproviders
 {
-	import flash.utils.Dictionary;
+
 
 	import org.swiftsuspenders.Injector;
 
@@ -30,7 +30,7 @@ package org.swiftsuspenders.dependencyproviders
 		 * constructed using the <code>usingInjector</code>
 		 */
 		public function apply(
-			targetType : Class, activeInjector : Injector, injectParameters : Dictionary) : Object
+			targetType : Class, activeInjector : Injector, injectParameters : Object /*Dictionary*/) : Object
 		{
 			return activeInjector.instantiateUnmapped(_responseType);
 		}
